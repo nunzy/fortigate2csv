@@ -24,7 +24,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--firewall',  help='Firewall', required=True)
     parser.add_argument('-u', '--user',      help='Username', required=True)
-    parser.add_argument('-v', '--vdom',      help='VDOM', required=True)
+    parser.add_argument('-v', '--vdom',      help='VDOM', default='root')
     parser.add_argument('-i', '--item',      help='Item', required=True)
     parser.add_argument('-t', '--translate', help='Include translation of IP objects', action='store_true')
     parser.add_argument('-o', '--outfile',   help='Output file')
@@ -36,7 +36,9 @@ def main():
     addresses = {}
 
     # check item type
-    if args.item not in item_types:
+    if args.item == 'all':
+        print(f'Retriving all data')
+    elif args.item not in item_types:
         print(f'Please choose a valid item type: {", ".join(map(str, item_types))}')
         sys.exit(1)
 
@@ -74,79 +76,171 @@ def main():
 
     print('Fetching data...')
 
-    # DNAT and VIPs
-    if args.item == 'dnat':
-        data = f.get(f'{base_url}api/v2/cmdb/firewall/vip/?vdom={args.vdom}').json()
-        headers = ['name', 'extip', 'mappedip', 'extintf', 'arp-reply', 
+    # Get all info
+    if args.item != 'all':
+
+        # DNAT and VIPs
+        if args.item == 'dnat':
+            data = f.get(f'{base_url}api/v2/cmdb/firewall/vip/?vdom={args.vdom}').json()
+            headers = ['name', 'extip', 'mappedip', 'extintf', 'arp-reply',
+                'nat-source-vip', 'portforward', 'srcintf-filter', 'comments']
+
+        # SNAT Mapping
+        elif args.item == 'snat':
+            data = f.get(f'{base_url}api/v2/cmdb/firewall/central-snat-map/?vdom={args.vdom}').json()
+            headers = ['policyid', 'status', 'orig-addr', 'dst-addr', 'srcintf', 'dstintf',
+                'nat', 'nat-ippool', 'comments']
+
+        # addresses
+        elif args.item == 'address':
+            data = f.get(f'{base_url}api/v2/cmdb/firewall/address/?vdom={args.vdom}').json()
+            headers = ['name', 'type', 'subnet', 'fqdn', 'associated-interface', 'visibility',
+                'allow-routing', 'comment']
+
+        # address groups
+        elif args.item == 'addrgrp':
+            data = f.get(f'{base_url}api/v2/cmdb/firewall/addrgrp/?vdom={args.vdom}').json()
+            headers = ['name', 'member', 'comment', 'visibility', 'allow-routing']
+
+        # pools
+        elif args.item == 'pool':
+            data = f.get(f'{base_url}api/v2/cmdb/firewall/ippool/?vdom={args.vdom}').json()
+            headers = ['name', 'type', 'startip', 'endip', 'source-startip', 'source-endip',
+            'block-size', 'permit-any-host', 'arp-reply', 'comments']
+
+        # services
+        elif args.item == 'service':
+            data = f.get(f'{base_url}api/v2/cmdb/firewall.service/custom?vdom={args.vdom}').json()
+            headers = ['name', 'category', 'protocol', 'tcp-portrange', 'udp-portrange',
+                'visibility', 'comments']
+
+        # interfaces
+        elif args.item == 'interface':
+            data = f.get(f'{base_url}api/v2/monitor/system/available-interfaces?vdom={args.vdom}').json()
+            headers = ['name', 'alias', 'description', 'type', 'is_vdom_link', 'is_system_interface',
+                'is_vlan', 'status', 'role', 'ipv4_addresses', 'vlan_interface', 'vlan_id',
+                'mac_address', 'visibility', 'comments']
+
+        # policies
+        elif args.item == 'policy':
+            data = f.get(f'{base_url}api/v2/cmdb/firewall/policy?vdom={args.vdom}').json()
+            headers = ['policyid', 'name', 'srcintf', 'dstintf', 'srcaddr', 'dstaddr', 'internet-service-id',
+                'internet-service-src-id', 'service', 'action', 'status', 'schedule', 'visibility',
+                'profile-group', 'nat', 'comments']
+
+
+        # format the data
+        if 'results' not in data:
+            print('Firewall returned no results')
+            sys.exit(1)
+
+        if args.translate:
+            csv_data = build_csv(headers, data['results'], addresses)
+        else:
+            csv_data = build_csv(headers, data['results'])
+
+        # display or save
+        if not args.outfile:
+            # display with some start/end padding
+            print(f"{'*'*20} start csv {'*'*20}\n{csv_data}\n{'*'*21} end csv {'*'*21}")
+        else:
+            # save to designated file
+            print(f'Saving to {args.outfile}')
+            file = open(args.outfile, "w")
+            file.write(csv_data)
+            file.close()
+
+    elif args.item == 'all':
+
+        # DNAT and VIPs
+        dnat_data = f.get(f'{base_url}api/v2/cmdb/firewall/vip/?vdom={args.vdom}').json()
+        dnat_headers = ['name', 'extip', 'mappedip', 'extintf', 'arp-reply',
             'nat-source-vip', 'portforward', 'srcintf-filter', 'comments']
 
-    # SNAT Mapping
-    elif args.item == 'snat':
-        data = f.get(f'{base_url}api/v2/cmdb/firewall/central-snat-map/?vdom={args.vdom}').json()
-        headers = ['policyid', 'status', 'orig-addr', 'dst-addr', 'srcintf', 'dstintf', 
-            'nat', 'nat-ippool', 'comments']
+        # SNAT Mapping
+        snat_data = f.get(f'{base_url}api/v2/cmdb/firewall/central-snat-map/?vdom={args.vdom}').json()
+        snat_headers = ['policyid', 'status', 'orig-addr', 'dst-addr', 'srcintf', 'dstintf',
+             'nat', 'nat-ippool', 'comments']
 
-    # addresses
-    elif args.item == 'address':
-        data = f.get(f'{base_url}api/v2/cmdb/firewall/address/?vdom={args.vdom}').json()
-        headers = ['name', 'type', 'subnet', 'fqdn', 'associated-interface', 'visibility', 
+        # addresses
+        address_data = f.get(f'{base_url}api/v2/cmdb/firewall/address/?vdom={args.vdom}').json()
+        address_headers = ['name', 'type', 'subnet', 'fqdn', 'associated-interface', 'visibility',
             'allow-routing', 'comment']
 
-    # address groups
-    elif args.item == 'addrgrp':
-        data = f.get(f'{base_url}api/v2/cmdb/firewall/addrgrp/?vdom={args.vdom}').json()
-        headers = ['name', 'member', 'comment', 'visibility', 'allow-routing']
+        # address groups
+        addrgrp_data = f.get(f'{base_url}api/v2/cmdb/firewall/addrgrp/?vdom={args.vdom}').json()
+        addrgrp_headers = ['name', 'member', 'comment', 'visibility', 'allow-routing']
 
-    # pools
-    elif args.item == 'pool':
-        data = f.get(f'{base_url}api/v2/cmdb/firewall/ippool/?vdom={args.vdom}').json()
-        headers = ['name', 'type', 'startip', 'endip', 'source-startip', 'source-endip', 
-        'block-size', 'permit-any-host', 'arp-reply', 'comments']
+        # pools
+        pool_data = f.get(f'{base_url}api/v2/cmdb/firewall/ippool/?vdom={args.vdom}').json()
+        pool_headers = ['name', 'type', 'startip', 'endip', 'source-startip', 'source-endip',
+            'block-size', 'permit-any-host', 'arp-reply', 'comments']
 
-    # services
-    elif args.item == 'service':
-        data = f.get(f'{base_url}api/v2/cmdb/firewall.service/custom?vdom={args.vdom}').json()
-        headers = ['name', 'category', 'protocol', 'tcp-portrange', 'udp-portrange',
+        # services
+        service_data = f.get(f'{base_url}api/v2/cmdb/firewall.service/custom?vdom={args.vdom}').json()
+        service_headers = ['name', 'category', 'protocol', 'tcp-portrange', 'udp-portrange',
             'visibility', 'comments']
 
-    # interfaces
-    elif args.item == 'interface':
-        data = f.get(f'{base_url}api/v2/monitor/system/available-interfaces?vdom={args.vdom}').json()
-        headers = ['name', 'alias', 'description', 'type', 'is_vdom_link', 'is_system_interface', 
-            'is_vlan', 'status', 'role', 'ipv4_addresses', 'vlan_interface', 'vlan_id', 
+        # interfaces
+        interface_data = f.get(f'{base_url}api/v2/monitor/system/available-interfaces?vdom={args.vdom}').json()
+        interface_headers = ['name', 'alias', 'description', 'type', 'is_vdom_link', 'is_system_interface',
+            'is_vlan', 'status', 'role', 'ipv4_addresses', 'vlan_interface', 'vlan_id',
             'mac_address', 'visibility', 'comments']
 
-    # policies
-    elif args.item == 'policy':
-        data = f.get(f'{base_url}api/v2/cmdb/firewall/policy?vdom={args.vdom}').json()
-        headers = ['policyid', 'name', 'srcintf', 'dstintf', 'srcaddr', 'dstaddr', 'internet-service-id',
-            'internet-service-src-id', 'service', 'action', 'status', 'schedule', 'visibility', 
+        # policies
+        policy_data = f.get(f'{base_url}api/v2/cmdb/firewall/policy?vdom={args.vdom}').json()
+        policy_headers = ['policyid', 'name', 'srcintf', 'dstintf', 'srcaddr', 'dstaddr', 'internet-service-id',
+            'internet-service-src-id', 'service', 'action', 'status', 'schedule', 'visibility',
             'profile-group', 'nat', 'comments']
-    
+
+
+        # format the data
+        if 'results' not in interface_data:
+            print('Firewall returned no results')
+            sys.exit(1)
+
+        if args.translate:
+            interface_csv_data = build_csv(interface_headers, interface_data['results'], addresses)
+            policy_csv_data = build_csv(policy_headers, policy_data['results'], addresses)
+            snat_csv_data = build_csv(snat_headers, snat_data['results'], addresses)
+            address_csv_data = build_csv(address_headers, address_data['results'], addresses)
+            service_csv_data = build_csv(service_headers, service_data['results'], addresses)
+            dnat_csv_data = build_csv(dnat_headers, dnat_data['results'], addresses)
+            pool_csv_data = build_csv(pool_headers, pool_data['results'], addresses)
+            addrgrp_csv_data = build_csv(addrgrp_headers, addrgrp_data['results'], addresses)
+        else:
+            interface_csv_data = build_csv(interface_headers, interface_data['results'])
+            policy_csv_data = build_csv(policy_headers, policy_data['results'])
+            snat_csv_data = build_csv(snat_headers, snat_data['results'])
+            address_csv_data = build_csv(address_headers, address_data['results'])
+            service_csv_data = build_csv(service_headers, service_data['results'])
+            dnat_csv_data = build_csv(dnat_headers, dnat_data['results'])
+            pool_csv_data = build_csv(pool_headers, pool_data['results'])
+            addrgrp_csv_data = build_csv(addrgrp_headers, addrgrp_data['results'])
+
+        # display or save
+        if not args.outfile:
+            # display with some start/end padding
+            print(f"{'*'*20} start interface csv {'*'*20}\n{interface_csv_data}\n{'*'*21} end csv {'*'*21}")
+            print(f"{'*'*20} start policy csv {'*'*20}\n{policy_csv_data}\n{'*'*21} end csv {'*'*21}")
+            print(f"{'*'*20} start snat csv {'*'*20}\n{snat_csv_data}\n{'*'*21} end csv {'*'*21}")
+            print(f"{'*'*20} start address csv {'*'*20}\n{address_csv_data}\n{'*'*21} end csv {'*'*21}")
+            print(f"{'*'*20} start service csv {'*'*20}\n{service_csv_data}\n{'*'*21} end csv {'*'*21}")
+            print(f"{'*'*20} start dnat csv {'*'*20}\n{dnat_csv_data}\n{'*'*21} end csv {'*'*21}")
+            print(f"{'*'*20} start pool csv {'*'*20}\n{pool_csv_data}\n{'*'*21} end csv {'*'*21}")
+            print(f"{'*'*20} start addrgrp csv {'*'*20}\n{addrgrp_csv_data}\n{'*'*21} end csv {'*'*21}")
+        else:
+            for x in item_types:
+                print(x)
+                # save to designated files
+                print(f'Saving to {args.outfile}-{x}')
+                file = open(args.outfile + '-' + x + '.csv', "w")
+                file.write(interface_csv_data)
+                file.close()
+
     # logout to prevent stale sessions
     print(f'Logging out of firewall')
     f.get(f'https://{args.firewall}/logout', verify=False, timeout=10)
-    
-    # format the data
-    if 'results' not in data:
-        print('Firewall returned no results')
-        sys.exit(1)
-    
-    if args.translate:
-        csv_data = build_csv(headers, data['results'], addresses)
-    else:
-        csv_data = build_csv(headers, data['results'])
-
-    # display or save
-    if not args.outfile:
-        # display with some start/end padding
-        print(f"{'*'*20} start csv {'*'*20}\n{csv_data}\n{'*'*21} end csv {'*'*21}")
-    else:
-        # save to designated file
-        print(f'Saving to {args.outfile}')
-        file = open(args.outfile, "w")
-        file.write(csv_data)
-        file.close()
 
     print(f'Done!')
 
