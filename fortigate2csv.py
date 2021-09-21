@@ -142,7 +142,11 @@ def main():
         # display or save
         if not args.outfile:
             # display with some start/end padding
-            print(f"{'*'*20} start csv {'*'*20}\n{csv_data}\n{'*'*21} end csv {'*'*21}")
+            # print(f"{'*'*20} start csv {'*'*20}\n{csv_data}\n{'*'*21} end csv {'*'*21}")
+            print(f'Saving to {args.firewall}')
+            file = open(args.firewall, "w")
+            file.write(csv_data)
+            file.close()
         else:
             # save to designated file
             print(f'Saving to {args.outfile}')
@@ -221,17 +225,20 @@ def main():
         # display or save
         if not args.outfile:
             # display with some start/end padding
-            print(f"{'*'*20} start interface csv {'*'*20}\n{interface_csv_data}\n{'*'*21} end csv {'*'*21}")
-            print(f"{'*'*20} start policy csv {'*'*20}\n{policy_csv_data}\n{'*'*21} end csv {'*'*21}")
-            print(f"{'*'*20} start snat csv {'*'*20}\n{snat_csv_data}\n{'*'*21} end csv {'*'*21}")
-            print(f"{'*'*20} start address csv {'*'*20}\n{address_csv_data}\n{'*'*21} end csv {'*'*21}")
-            print(f"{'*'*20} start service csv {'*'*20}\n{service_csv_data}\n{'*'*21} end csv {'*'*21}")
-            print(f"{'*'*20} start dnat csv {'*'*20}\n{dnat_csv_data}\n{'*'*21} end csv {'*'*21}")
-            print(f"{'*'*20} start pool csv {'*'*20}\n{pool_csv_data}\n{'*'*21} end csv {'*'*21}")
-            print(f"{'*'*20} start addrgrp csv {'*'*20}\n{addrgrp_csv_data}\n{'*'*21} end csv {'*'*21}")
+            # print(f"{'*'*20} start interface csv {'*'*20}\n{interface_csv_data}\n{'*'*21} end csv {'*'*21}")
+            # print(f"{'*'*20} start policy csv {'*'*20}\n{policy_csv_data}\n{'*'*21} end csv {'*'*21}")
+            # print(f"{'*'*20} start snat csv {'*'*20}\n{snat_csv_data}\n{'*'*21} end csv {'*'*21}")
+            # print(f"{'*'*20} start address csv {'*'*20}\n{address_csv_data}\n{'*'*21} end csv {'*'*21}")
+            # print(f"{'*'*20} start service csv {'*'*20}\n{service_csv_data}\n{'*'*21} end csv {'*'*21}")
+            # print(f"{'*'*20} start dnat csv {'*'*20}\n{dnat_csv_data}\n{'*'*21} end csv {'*'*21}")
+            # print(f"{'*'*20} start pool csv {'*'*20}\n{pool_csv_data}\n{'*'*21} end csv {'*'*21}")
+            # print(f"{'*'*20} start addrgrp csv {'*'*20}\n{addrgrp_csv_data}\n{'*'*21} end csv {'*'*21}")
+            print(f'Saving to {args.firewall}-{x}')
+            file = open(args.firewall + '-' + x + '.csv', "w")
+            file.write(interface_csv_data)
+            file.close()
         else:
             for x in item_types:
-                print(x)
                 # save to designated files
                 print(f'Saving to {args.outfile}-{x}')
                 file = open(args.outfile + '-' + x + '.csv', "w")
