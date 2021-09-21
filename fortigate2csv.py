@@ -25,7 +25,7 @@ def main():
     parser.add_argument('-f', '--firewall',  help='Firewall', required=True)
     parser.add_argument('-u', '--user',      help='Username', required=True)
     parser.add_argument('-v', '--vdom',      help='VDOM', default='root')
-    parser.add_argument('-i', '--item',      help='Item', required=True)
+    parser.add_argument('-i', '--item',      help='Item', default='all')
     parser.add_argument('-t', '--translate', help='Include translation of IP objects', action='store_true')
     parser.add_argument('-o', '--outfile',   help='Output file')
     args = parser.parse_args()

@@ -10,8 +10,8 @@ Command line arguments
 
 * `-f` - Firewall IP/FQDN
 * `-u` - Username
-* `-v` - VDOM
-* `-i` - Items *(interface, policy, snat, address, service, dnat, pool, addrgrp)*
+* `-v` - VDOM - root VDOM by default
+* `-i` - Items - All by default or use *(interface, policy, snat, address, service, dnat, pool, addrgrp)*
 * `-o` - CSV Outfile *(optional)*
 * `-t` - Translate network object names to IPv4 *(optional)*
 
