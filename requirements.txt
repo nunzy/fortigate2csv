@@ -1,2 +1,8 @@
+certifi==2021.10.8
+chardet==3.0.4
+idna==2.10
 netaddr==0.8.0
+protobuf==3.19.4
 requests==2.24.0
+six==1.16.0
+urllib3==1.25.11
