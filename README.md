@@ -9,6 +9,7 @@ Some common objects are included, and you can easily modify and extend to your r
 Command line arguments
 
 * `-f` - Firewall IP/FQDN
+* `-p` - Admim port number
 * `-u` - Username
 * `-v` - VDOM - root VDOM by default
 * `-i` - Items - All by default or use *(interface, policy, snat, address, service, dnat, pool, addrgrp)*
@@ -18,8 +19,8 @@ Command line arguments
 ### Example
 
 ```
-% python fortigate2csv.py -f 1.2.3.4 -u dan -v management -i address -o address.csv
-Connecting to 1.2.3.4 (management) as dan
+% python fortigate2csv.py -f 1.2.3.4 -p 8443 -u dan -v management -i address -o address.csv
+Connecting to 1.2.3.4:8443 (management) as dan
 Successfully logged in as dan
 Fetching data...
 Logging out of firewall
