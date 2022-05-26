@@ -23,6 +23,7 @@ def main():
     # build a parser, set arguments, parse the input
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--firewall',  help='Firewall', required=True)
+    parser.add_argument('-p', '--port',      help='Admin port', default='8443')
     parser.add_argument('-u', '--user',      help='Username', required=True)
     parser.add_argument('-v', '--vdom',      help='VDOM', default='root')
     parser.add_argument('-i', '--item',      help='Item', default='all')
@@ -30,7 +31,7 @@ def main():
     parser.add_argument('-o', '--outfile',   help='Output file')
     args = parser.parse_args()
 
-    base_url = f'https://{args.firewall}/'
+    base_url = f'https://{args.firewall}:{args.port}/'
 
     # holds an address lookup table, if requested
     addresses = {}
@@ -46,8 +47,8 @@ def main():
     password = getpass.getpass()
 
     # connect and authenticate
-    print(f'Connecting to {args.firewall} ({args.vdom}) as {args.user}')
-    f = f_login(args.firewall, args.user, password, args.vdom)
+    print(f'Connecting to {args.firewall}:{args.port} ({args.vdom}) as {args.user}')
+    f = f_login(args.firewall, args.port, args.user, password, args.vdom)
 
     # build a translation table if required
     if args.translate:
@@ -233,7 +234,7 @@ def main():
             # print(f"{'*'*20} start dnat csv {'*'*20}\n{dnat_csv_data}\n{'*'*21} end csv {'*'*21}")
             # print(f"{'*'*20} start pool csv {'*'*20}\n{pool_csv_data}\n{'*'*21} end csv {'*'*21}")
             # print(f"{'*'*20} start addrgrp csv {'*'*20}\n{addrgrp_csv_data}\n{'*'*21} end csv {'*'*21}")
-            print(f'Saving to {args.firewall}-{x}')
+            print(f'Saving to {args.firewall}')
             file = open(args.firewall + '-interface.csv', "w")
             file.write(interface_csv_data)
             file.close()
@@ -286,7 +287,7 @@ def main():
 
     # logout to prevent stale sessions
     print(f'Logging out of firewall')
-    f.get(f'https://{args.firewall}/logout', verify=False, timeout=10)
+    f.get(f'https://{args.firewall}:{args.port}/logout', verify=False, timeout=10)
 
     print(f'Done!')
 
@@ -348,11 +349,12 @@ def build_csv(headers, rows, address_lookup=None):
 
 
 
-def f_login(host,user,password,vdom):
+def f_login(host,port,user,password,vdom):
     """ 
     Return a requests session after authenticating
 
     :param host: IP/FQDN of firewall
+    :param port: Admin port of firewall
     :param user: FortiGate username
     :param password: FortiGate user password
     :param vdom: FortiGate VDOM
@@ -361,7 +363,7 @@ def f_login(host,user,password,vdom):
     """
     # send the initial authentication request
     session = requests.session()
-    p = session.post(f'https://{host}/logincheck',
+    p = session.post(f'https://{host}:{port}/logincheck',
         data=f'username={user}&secretkey={password}',
         verify=False,
         timeout=10)
@@ -375,14 +377,14 @@ def f_login(host,user,password,vdom):
     # if there is a login banner, we need to 'accept' it
     if 'logindisclaimer' in p.text:
         print('Accepting login banner')
-        session.post(f'https://{host}/logindisclaimer',
+        session.post(f'https://{host}:{port}/logindisclaimer',
             data=f'confirm=1&redir=/ng',
             verify=False,
             timeout=10)
 
     # check login was successful
     try:
-        login = session.get(f'https://{host}/api/v2/cmdb/system/vdom')
+        login = session.get(f'https://{host}:{port}/api/v2/cmdb/system/vdom')
         login.raise_for_status()
         print(f'Successfully logged in as {user}')
     except Exception as e: 
